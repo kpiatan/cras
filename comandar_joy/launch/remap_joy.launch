@@ -1,0 +1,9 @@
+<launch>
+  
+  <!-- <remap from="cmd_vel" to="joy/cmd_vel"/> -->
+
+  <include file="$(find comandar_joy)/launch/joy.launch" />
+
+  <node name="mux_cmd_vel" pkg="topic_tools" type="mux" args="cmd_vel2 joy/cmd_vel air1/cmd_vel" output="screen"/>
+
+</launch>
