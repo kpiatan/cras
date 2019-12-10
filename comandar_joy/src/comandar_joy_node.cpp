@@ -11,7 +11,6 @@ public:
 
 private:
   void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
-  void simCallback(const geometry_msgs::Twist::ConstPtr& twist);
 
   ros::NodeHandle nh_;
 
@@ -52,30 +51,42 @@ void TeleopJoy::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   if (joy->buttons[0] && !linear_pressed)
   {
     l_scale_ += 0.05;
-    //sim_l_scale += 0.05;
     linear_pressed = 1;
   }
+  /*
   if (joy->buttons[1]&& !linear_pressed) 
   {
     l_scale_ -= 0.05;
-    //sim_l_scale -= 0.05;
     linear_pressed = 1;
   }
+  
   if ((!joy->buttons[1]) && (!joy->buttons[0])) linear_pressed = 0;
+  */
+
+ if (!joy->buttons[0]) linear_pressed = 0;
 
   if (joy->buttons[4] && !angular_pressed) 
   {
     a_scale_ += 0.05;
-    //sim_a_scale += 0.05;
     angular_pressed = 1;
   }
+  /*
   if (joy->buttons[3]&& !angular_pressed) 
   {
     a_scale_ -= 0.05;
-    //sim_a_scale -= 0.05;
     angular_pressed = 1;
   }
+  
   if ((!joy->buttons[3]) && (!joy->buttons[4])) angular_pressed = 0;
+  */
+
+  if (!joy->buttons[4]) angular_pressed = 0;
+
+  if (joy->buttons[3])
+  {
+    a_scale_ = 0.05;
+    l_scale_ = 0.05;
+  }
 
 
   // MODO AUTOMATICO - CONTROLE ATRAVÉS DO SEGUIMENTO DE SOLDA
@@ -95,7 +106,7 @@ void TeleopJoy::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
   }
 
   // PUBLICANDO
-  twist.angular.z = -a_scale_*joy->axes[angular_];
+  twist.angular.z = a_scale_*joy->axes[angular_];
   twist.linear.x = l_scale_*joy->axes[linear_];
   vel_pub_.publish(twist);
 
