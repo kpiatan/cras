@@ -38,7 +38,7 @@ void setup()
   pinMode(auxLU, INPUT_PULLUP);
   pinMode(auxLD, INPUT_PULLUP);
   pinMode(auxMU, INPUT_PULLUP);
-  pinMode(auxMU, INPUT_PULLUP);
+  pinMode(auxMD, INPUT_PULLUP);
   pinMode(auxRU, INPUT_PULLUP);
 
   pinMode(leftL, INPUT_PULLUP);
@@ -102,5 +102,5 @@ void loop()
   
   pub.publish(&joy_msg);
   nh.spinOnce();
-  delay(500);
+  delay(250);
 }
