@@ -6,6 +6,7 @@
 
   <node pkg="rosserial_python" name="rosserial_joy" type="serial_node.py" args="/dev/ttyACM0 _baud:=9600" output="screen"/>
 
+  <!-- topic tools mux args usage: output_topic input_topic1(default) input_topic2 ... -->
   <node pkg="topic_tools" name="mux_cmd_vel" type="mux" args="cmd_vel2 joy/cmd_vel air1/cmd_vel" output="screen"/>
 
   <node pkg="comandar_joy" type="comandar_joy_node" name="comandar_joy_node" output="screen">
@@ -13,8 +14,6 @@
     <param name="axis_angular" value="2" type="int"/>
     <param name="scale_linear" value="0.05" type="double"/>
     <param name="scale_angular" value="0.05" type="double"/>
-    <!-- <param name="linear_accel" value="0.2" type="double"/> -->
-    <!-- <param name="linear_max" value="2.0" type="double"/> -->
     <!-- <param name="topic_name" value="/cmd_vel" type="string"/> -->
 
   </node>
