@@ -3,8 +3,7 @@ import rospy
 from sensor_msgs.msg import LaserScan, PointCloud
 from geometry_msgs.msg import Twist, Quaternion,TwistStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Float64,Float32, Int16
-from sensor_msgs.msg import Joy
+from std_msgs.msg import Float64,Float32
 import tf
 
 import random
@@ -13,8 +12,7 @@ import math
 
 import filtro
 import ajusteTanque
-import fuzzy, fuzzy_autonomy
-import time
+import fuzzy
 
 import os
 
@@ -24,39 +22,9 @@ gravidade_x = 0
 gravidade_y = 0
 gravidade_z = 1
 
-start_time = time.time()
-
-lado = [2,1,2,1] # sequencia de acoes a serem seguidas em cruzamentos: 0 - reto / 1 - esquerda / 2 - direita
-lado_joy = 0 # lado vindo do joystick
-index = 0 # index que percorre o array 'lado'
-autonomy = 4 # 1 - manual, 2 - controle de vel linear, 3 - controle de direcao, 4 - autonomo
-espera_joy = 0 # 1 - esperando, 0 - pronto
-erroacumulado = 0 # 
-
 def laserCallback(data):
     global d
     d = data
-
-    return
-
-def joycallback(data):
-    global lado_joy
-    global espera_joy
-    if data.axes[0] > 0: #esquerda
-        lado_joy = 1
-        espera_joy = 0
-    elif data.axes[0] < 0: #direita
-        lado_joy = 2
-        espera_joy = 0
-    if data.axes[1] > 0: # ir reto
-        lado_joy = 0
-        espera_joy = 0
-
-    return
-
-def autonomycallback(data):
-    global autonomy
-    autonomy = data.data
 
     return
 
@@ -68,7 +36,39 @@ def odonCallback(data):
     z = data.pose.pose.orientation.z
     w = data.pose.pose.orientation.w
     explicit_quat = [x,y,z,w]
-
+    # rot_matrix = tf.transformations.quaternion_matrix(explicit_quat)
+    #
+    # # theta ->y
+    # # psi -> x
+    # # fi ->z
+    # if rot_matrix[2][0] != 1 or rot_matrix[2][0] != -1:
+    #     theta1 = -math.asin(rot_matrix[2][0])
+    #     theta2 = math.pi - theta1
+    #
+    #     psi1 = math.atan2(rot_matrix[2][1]/math.cos(theta1),rot_matrix[2][2]/math.cos(theta1))
+    #     psi2 = math.atan2(rot_matrix[2][1]/math.cos(theta2),rot_matrix[2][2]/math.cos(theta2))
+    #
+    #     fi1 = math.atan2(rot_matrix[1][0]/math.cos(theta1),rot_matrix[0][0]/math.cos(theta1))
+    #     fi2 = math.atan2(rot_matrix[1][0]/math.cos(theta2),rot_matrix[0][0]/math.cos(theta2))
+    #     print psi1,theta1,fi1,"2:",psi2,theta2,fi2
+    #     if yaw == -10:
+    #         yaw = fi1
+    #     elif math.fabs(yaw - fi1) < math.fabs(yaw - fi2):
+    #         yaw = fi1
+    #
+    #     else:
+    #         yaw = fi2
+    # else:
+    #     fi1 = 0
+    #     if rot_matrix[2][0] == -1:
+    #         theta1 = math.pi/2
+    #         psi1 = fi1 + math.atan2(rot_matrix[0][1],rot_matrix[0][2])
+    #     else:
+    #         theta1 = -math.pi/2
+    #         psi1 = - fi1 + math.atan2(-rot_matrix[0][1],-rot_matrix[0][2])
+    #
+    #     if yaw == -10:
+    #         yaw = fi1
     (roll,pitch,yaw) = tf.transformations.euler_from_quaternion(explicit_quat)
     # print yaw
     return
@@ -90,10 +90,6 @@ def listener():
     global gravidade_x
     global gravidade_y
     global gravidade_z
-    global espera_joy
-    global autonomy
-    global erroacumulado
-    global index
 
     # filtro.calcularFiltro()
     #filtro.criarGraficos()
@@ -109,8 +105,7 @@ def listener():
     pubFiltro = rospy.Publisher('filtro', PointCloud, queue_size=10)
     pubTanque = rospy.Publisher('tanque', PointCloud, queue_size=10)
     pubPointCloud  = rospy.Publisher('pointLRS36', PointCloud, queue_size=10)
-    pubVel = rospy.Publisher('air1/cmd_vel',Twist,queue_size=10) #alterado 
-    #pubVel = rospy.Publisher('sim/cmd_vel',Twist,queue_size=10)
+    pubVel = rospy.Publisher('air1/cmd_vel',Twist,queue_size=10)
     pubErro  = rospy.Publisher('air1/erro', Float32, queue_size=10)
 
     rospy.init_node('processamento_node', anonymous=True)
@@ -118,8 +113,6 @@ def listener():
     rospy.Subscriber('air1/lrs36', LaserScan, laserCallback)
     rospy.Subscriber('air1/odon', Odometry, odonCallback)
     rospy.Subscriber('air1/twist', TwistStamped, twistCallback)
-    rospy.Subscriber('joy', Joy, joycallback)
-    rospy.Subscriber('autonomy_level', Int16, autonomycallback)
 
     rate = rospy.Rate(1000)
     orie_desejada = 0
@@ -147,42 +140,24 @@ def listener():
                 #pubTanque.publish(ajusteTanque.testecalcularCentroSolda(scan))
                 #    pubFiltro.publish(filtrado)
                 erro_x = ajusteTanque.calcularCentroSolda(sinal)
-                pubErro.publish(erro_x)
                 erro_orientacao =  0
-                erroacumulado = erroacumulado + erro_x*erro_x
-                print("ErroAcumulado:")
-                print erroacumulado
-                elapsed_time = time.time() - start_time
-                print("Tempo:")
-                print elapsed_time
-                erro_por_tempo = math.sqrt(erroacumulado)/elapsed_time
-                print("metrica:")
-                print erro_por_tempo
 
 
                 vang,vlin=fuzzy.calculaVelocidade(erro_x,erro_orientacao,3,gravidade_x,gravidade_y,gravidade_z)
                 msg = Twist()
                 msg.linear.x=0.3*vlin
                 msg.angular.z= vang
-                if espera_joy == 1:
-                    msg.linear.x = 0
-                    msg.angular.z = 0
                 # print erro_x, erro_orientacao, msg.linear.x, msg.angular.z
                 pubVel.publish(msg)
 
 
             else:
-                
                 # print scan.points
                 iMin,iMax,estado = ajusteTanque.calcularLimitesSolda(scan)
-                #ladoRotacao = random.randint(0,1)
-                if autonomy == 3:
-                    lado[index] = lado_joy
-                ladoRotacao = lado[index]
-                print("estado:")
+                ladoRotacao = random.randint(0,1)
+                #ladoRotacao = 0
                 print estado
-                print("autonomylevel:")
-                print autonomy
+
 
                 if gravidade_z > 0.4:
                     gPos = 0
@@ -196,32 +171,22 @@ def listener():
                     angulo = math.atan2(-gravidade_y,gravidade_x)
                 orie_desejada = angulo
 
-                # cruzamento em t
+                # cruzamento em T
                 if estado == 0:
-                    if autonomy == 3:
-                        espera_joy = 1
-                    if ladoRotacao == 2:
+                    if ladoRotacao == 0:
                         orie_desejada = orie_desejada - math.pi/2 # direita
-                    elif ladoRotacao == 1:
+                    else:
                         orie_desejada = orie_desejada + math.pi/2 # esquerda
 
                 # reto ou curva a direita
                 if estado == 1:
-                    if autonomy == 3:
-                        espera_joy = 1
-                    if ladoRotacao == 2:
-                        orie_desejada = orie_desejada - math.pi/2
+                    if ladoRotacao == 1:
+                         orie_desejada = orie_desejada - math.pi/2
 
                 # reto ou curva a esquerda
                 if estado == 2:
-                    if autonomy == 3:
-                        espera_joy = 1
                     if ladoRotacao == 1:
                         orie_desejada = orie_desejada + math.pi/2
-
-                index+=1
-                if index >= len(lado):
-                    index = 0
 
                 if orie_desejada > math.pi:
                     orie_desejada = orie_desejada - 2*math.pi
@@ -242,15 +207,11 @@ def listener():
 
                 while math.fabs(erro_orientacao) > 0.05:
                     vang,vlin=fuzzy.calculaVelocidade(erro_x,erro_orientacao,estado,gravidade_x,gravidade_y,gravidade_z)
-                    pubErro.publish(erro_x)
                     # print erro_orientacao
                     # pubErro.publish(math.fabs(erro_orientacao))
                     msg = Twist()
                     msg.angular.z= 1.25*vang
-                    msg.linear.x=0.1285*vlin
-                    if espera_joy == 1:
-                        msg.linear.x = 0
-                        msg.angular.z = 0
+                    msg.linear.x=0.130*vlin
                     # print erro_x, erro_orientacao, msg.linear.x, msg.angular.z
                     pubVel.publish(msg)
                     if gPos == 0:
@@ -274,9 +235,6 @@ def listener():
                     msg = Twist()
                     msg.linear.x =0.01 * vlin
                     msg.angular.z = vang
-                    if espera_joy == 1:
-                        msg.linear.x = 0
-                        msg.angular.z = 0
                     pubVel.publish(msg)
                     # print ajusteTanque.calcularLimitesSolda(scan)
                     scan = ajusteTanque.laserScanToPointCloud(d)

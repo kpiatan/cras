@@ -1,0 +1,5 @@
+<launch>
+
+  <node name="autonomy_control_node" pkg="autonomy_control" type="simulacao.py" output="screen"/>
+
+</launch>
