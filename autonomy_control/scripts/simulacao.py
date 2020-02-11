@@ -28,7 +28,7 @@ start_time = time.time()
 
 lado = [2,1,2,1] # sequencia de acoes a serem seguidas em cruzamentos: 0 - reto / 1 - esquerda / 2 - direita
 lado_joy = 0 # lado vindo do joystick
-index = 0 # index que percorre o array 'lado'
+index_sequence = 0 # index_sequence que percorre o array 'lado'
 autonomy = 4 # 1 - manual, 2 - controle de vel linear, 3 - controle de direcao, 4 - autonomo
 espera_joy = 0 # 1 - esperando, 0 - pronto
 erroacumulado = 0 # 
@@ -39,7 +39,7 @@ def laserCallback(data):
 
     return
 
-def joycallback(data):
+def joyCallback(data):
     global lado_joy
     global espera_joy
     if data.axes[0] > 0: #esquerda
@@ -54,7 +54,7 @@ def joycallback(data):
 
     return
 
-def autonomycallback(data):
+def autonomyCallback(data):
     global autonomy
     autonomy = data.data
 
@@ -93,7 +93,7 @@ def listener():
     global espera_joy
     global autonomy
     global erroacumulado
-    global index
+    global index_sequence
 
     # filtro.calcularFiltro()
     #filtro.criarGraficos()
@@ -118,8 +118,8 @@ def listener():
     rospy.Subscriber('air1/lrs36', LaserScan, laserCallback)
     rospy.Subscriber('air1/odon', Odometry, odonCallback)
     rospy.Subscriber('air1/twist', TwistStamped, twistCallback)
-    rospy.Subscriber('joy', Joy, joycallback)
-    rospy.Subscriber('autonomy_level', Int16, autonomycallback)
+    rospy.Subscriber('joy', Joy, joyCallback)
+    rospy.Subscriber('autonomy_level', Int16, autonomyCallback)
 
     rate = rospy.Rate(1000)
     orie_desejada = 0
@@ -177,8 +177,8 @@ def listener():
                 iMin,iMax,estado = ajusteTanque.calcularLimitesSolda(scan)
                 #ladoRotacao = random.randint(0,1)
                 if autonomy == 3:
-                    lado[index] = lado_joy
-                ladoRotacao = lado[index]
+                    lado[index_sequence] = lado_joy
+                ladoRotacao = lado[index_sequence]
                 print("estado:")
                 print estado
                 print("autonomylevel:")
@@ -219,9 +219,9 @@ def listener():
                     if ladoRotacao == 1:
                         orie_desejada = orie_desejada + math.pi/2
 
-                index+=1
-                if index >= len(lado):
-                    index = 0
+                index_sequence+=1
+                if index_sequence >= len(lado):
+                    index_sequence = 0
 
                 if orie_desejada > math.pi:
                     orie_desejada = orie_desejada - 2*math.pi

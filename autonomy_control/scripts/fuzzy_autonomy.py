@@ -10,27 +10,21 @@ autonomy = 0
 def inicializaFuzzy():
     global autonomy
 
-    #inputs
-    FrontSensor = ctrl.Antecedent(np.arange(0,3,0.005),'FrontSensor')
-    BackSensor = ctrl.Antecedent(np.arange(0,3,0.005),'BackSensor')
+    #INPUTS
+    MyoValue = ctrl.Antecedent(np.arange(40,100,0.005),'MyoValue')
     JoyLinear = ctrl.Antecedent(np.arange(-1,1,0.005),'JoyLinear')
     JoyAngular = ctrl.Antecedent(np.arange(-2,2,0.005),'JoyTheta')
     WeldPos = ctrl.Antecedent(np.arange(-1,1,0.005),'WeldPos')
 
-    #outputs
+    #OUTPUTS
     LoA = ctrl.Consequent(np.arange(1,4,1),'LoA')
 
 
-    #membership functions
-    #front sensor
-    FrontSensor['Close'] = fuzz.trimf(FrontSensor.universe,[0, 0, 0.5])
-    FrontSensor['Medium'] = fuzz.trimf(FrontSensor.universe,[0, 0.5, 1])
-    FrontSensor['Far'] = fuzz.trimf(FrontSensor.universe,[1, 3, 3])
-
-    #back sensor
-    BackSensor['Close'] = fuzz.trimf(BackSensor.universe,[0, 0, 0.5])
-    BackSensor['Medium'] = fuzz.trimf(BackSensor.universe,[0, 0.5, 1])
-    BackSensor['Far'] = fuzz.trimf(BackSensor.universe,[1, 3, 3])
+    #MEMBERSHIP FUNCTIONS
+    #myo emg rms mean value
+    MyoValue['Low'] = fuzz.trimf(MyoValue.universe,[40, 40, 60])
+    MyoValue['Medium'] = fuzz.trimf(MyoValue.universe,[40, 60, 80])
+    MyoValue['High'] = fuzz.trimf(MyoValue.universe,[80, 100, 100])
 
     #velocity linear - joystick
     JoyLinear['NegHigh'] = fuzz.trimf(JoyLinear.universe,[-1, -1, -0.5])    
@@ -66,16 +60,7 @@ def inicializaFuzzy():
     LoA['Autonomous'] = fuzz.trimf(LoA.universe,[3, 4, 4])
 
 
-    #fuzzy rules
-    rule1 = ctrl.Rule(FrontSensor['Close'] & JoyLinear['PosHigh'],LoA['Autonomous'])
-    rule2 = ctrl.Rule(FrontSensor['Close'] & JoyLinear['PosMedium'],LoA['Supervisory'])
-    rule3 = ctrl.Rule(FrontSensor['Medium'] & JoyLinear['PosMedium'],LoA['Shared'])
-    rule4 = ctrl.Rule(FrontSensor['Far'] & JoyLinear['PosLow'],LoA['Manual'])
-
-    rule5 = ctrl.Rule(BackSensor['Close'] & JoyLinear['NegHigh'],LoA['Autonomous'])
-    rule6 = ctrl.Rule(BackSensor['Close'] & JoyLinear['NegMedium'],LoA['Supervisory'])
-    rule7 = ctrl.Rule(BackSensor['Medium'] & JoyLinear['NegMedium'],LoA['Shared'])
-    rule8 = ctrl.Rule(BackSensor['Far'] & JoyLinear['NegLow'],LoA['Manual'])
+    #RULES
 
     rule9 = ctrl.Rule(JoyAngular['LeftHigh'] & WeldPos['LeftHigh'],LoA['Manual'])
     rule10 = ctrl.Rule(JoyAngular['LeftHigh'] & WeldPos['LeftMedium'],LoA['Manual'])
@@ -134,7 +119,7 @@ def inicializaFuzzy():
     rule57 = ctrl.Rule(JoyAngular['RightHigh'] & WeldPos['RightHigh'],LoA['Manual'])
 
 
-    #fuzzy control
+    #CONTROL
     autonomy_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10,
                 rule11, rule12, rule13, rule14, rule15, rule16, rule17, rule18, rule19, rule20,
                 rule21, rule22, rule23, rule24, rule25, rule26, rule27, rule28, rule29, rule30,
@@ -146,11 +131,10 @@ def inicializaFuzzy():
 
     return
 
-def calculateAutonomy(fsensor,bsensor,jlinear,jangular,wpos):
+def calculateAutonomy(myo,jlinear,jangular,wpos):
     global autonomy
 
-    autonomy.input['FrontSensor'] = fsensor
-    autonomy.input['BackSensor'] = bsensor
+    autonomy.input['MyoValue'] = myo
     autonomy.input['JoyLinear'] = jlinear
     autonomy.input['JoyAngular'] = jangular
     autonomy.input['WeldPos'] = wpos
